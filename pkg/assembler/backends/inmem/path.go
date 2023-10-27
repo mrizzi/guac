@@ -270,6 +270,9 @@ func (c *demoClient) bfsThroughIsDependency(from, to uint32, maxLength int, allo
 }
 
 func (c *demoClient) bfsFromProduct(product uint32) (*[]model.CertifyVulnOrCertifyVEXStatement, error) {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
 	queue := make([]uint32, 0) // the queue of nodes in bfs
 	type dfsNode struct {
 		expanded bool // true once all node neighbors are added to queue
@@ -334,6 +337,93 @@ func (c *demoClient) bfsFromProduct(product uint32) (*[]model.CertifyVulnOrCerti
 	}
 
 	return &result, nil
+}
+
+func (c *demoClient) bfsFromVulnerablePackage(pkg uint32) ([][]model.Node, error) {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
+	queue := make([]uint32, 0) // the queue of nodes in bfs
+	type dfsNode struct {
+		expanded bool // true once all node neighbors are added to queue
+		parent   uint32
+	}
+	nodeMap := map[uint32]dfsNode{}
+
+	nodeMap[pkg] = dfsNode{}
+	queue = append(queue, pkg)
+
+	var now uint32
+	var productsFound []uint32
+	for len(queue) > 0 {
+		now = queue[0]
+		queue = queue[1:]
+		nowNode := nodeMap[now]
+
+		depPkg, err := byID[pkgNameOrVersion](now, c)
+		if err != nil {
+			return nil, gqlerror.Errorf("bfs ::  %s", err)
+		}
+		isDependencyLinks := depPkg.getIsDependencyLinks()
+		foundDependentPkg := false
+		for i := range isDependencyLinks {
+			dependencyLink, err := byID[*isDependencyLink](isDependencyLinks[i], c)
+			if err != nil {
+				return nil, err
+			}
+			if dependencyLink.depPackageID == now {
+				foundDependentPkg = true
+				next := dependencyLink.packageID
+				dfsN, seen := nodeMap[next]
+				if !seen {
+					dfsNIsDependency := dfsNode{
+						parent: now,
+					}
+					nodeMap[dependencyLink.id] = dfsNIsDependency
+					dfsN = dfsNode{
+						parent: dependencyLink.id,
+					}
+					nodeMap[next] = dfsN
+				}
+				if !dfsN.expanded {
+					queue = append(queue, next)
+				}
+			}
+		}
+		// if none of the dependencies found has 'depPkg' as dependency package,
+		// then it means 'depPkg' is a top level package (i.e. "product")
+		// to be 100% the 'HasSBOM' check should/could be added
+		if !foundDependentPkg {
+			productsFound = append(productsFound, now)
+		}
+
+		nowNode.expanded = true
+		nodeMap[now] = nowNode
+	}
+
+	result := [][]model.Node{}
+	for i := range productsFound {
+		reversedPath := []uint32{}
+		step := productsFound[i]
+		for step != pkg {
+			reversedPath = append(reversedPath, step)
+			step = nodeMap[step].parent
+		}
+		reversedPath = append(reversedPath, step)
+
+		// reverse path
+		path := make([]uint32, len(reversedPath))
+		for i, x := range reversedPath {
+			path[len(reversedPath)-i-1] = x
+		}
+
+		nodes, err := c.buildModelNodes(path)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, nodes)
+	}
+	return result, nil
 }
 
 func (c *demoClient) Node(ctx context.Context, source string) (model.Node, error) {

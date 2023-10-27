@@ -76,6 +76,7 @@ func (c *demoClient) FindTopLevelPackagesRelatedToVulnerability(ctx context.Cont
 		if err != nil {
 			return nil, gqlerror.Errorf("FindTopLevelPackagesRelatedToVulnerability failed with err: %v", err)
 		}
+		packagesAlreadyInvestigated := make([]uint32, 0)
 		for _, vexStatement := range vexStatements {
 			subject := vexStatement.Subject
 			var pkgVulnerable *model.Package
@@ -85,11 +86,21 @@ func (c *demoClient) FindTopLevelPackagesRelatedToVulnerability(ctx context.Cont
 			case *model.Artifact:
 				continue
 			}
-			products, err := c.findRelatedProducts(ctx, pkgVulnerable, vexStatement, productIDsCheckedVulnerable)
+			pkg, err := strconv.ParseUint(pkgVulnerable.Namespaces[0].Names[0].Versions[0].ID, 10, 32)
 			if err != nil {
 				return nil, err
 			}
-			result = append(result, products...)
+			paths, err := c.bfsFromVulnerablePackage(uint32(pkg))
+			if err != nil {
+				return nil, err
+			}
+			for i := range paths {
+				paths[i] = append([]model.Node{vexStatement}, paths[i]...)
+			}
+			result = append(result, paths...)
+			if len(paths) > 0 {
+				packagesAlreadyInvestigated = append(packagesAlreadyInvestigated, uint32(pkg))
+			}
 		}
 		// if no VEX Statements have been found or no path from any VEX statement to product has been found
 		// then let's check also for CertifyVuln
@@ -103,33 +114,19 @@ func (c *demoClient) FindTopLevelPackagesRelatedToVulnerability(ctx context.Cont
 				return nil, gqlerror.Errorf("FindTopLevelPackagesRelatedToVulnerability failed with err: %v", err)
 			}
 			for _, vuln := range vulnStatements {
-				products, err := c.findRelatedProducts(ctx, vuln.Package, vuln, productIDsCheckedVulnerable)
+				pkg, err := strconv.ParseUint(vuln.Package.Namespaces[0].Names[0].Versions[0].ID, 10, 32)
 				if err != nil {
 					return nil, err
 				}
-				result = append(result, products...)
-			}
-		}
-
-	}
-	return result, nil
-}
-
-func (c *demoClient) findRelatedProducts(ctx context.Context, pkgVulnerable *model.Package, vuln model.Node, productIDsCheckedVulnerable map[string]bool) ([][]model.Node, error) {
-	result := [][]model.Node{}
-	// if the package affected from the vulnerability is a product ID
-	// then we found a path from vulnerability to the package representing the product
-	if alreadyFoundVulnerable, ok := productIDsCheckedVulnerable[pkgVulnerable.Namespaces[0].Names[0].Versions[0].ID]; ok && !alreadyFoundVulnerable {
-		result = append(result, []model.Node{vuln, pkgVulnerable})
-		productIDsCheckedVulnerable[pkgVulnerable.Namespaces[0].Names[0].Versions[0].ID] = true
-	} else {
-		for idProduct, checkedVulnerable := range productIDsCheckedVulnerable {
-			if !checkedVulnerable {
-				path, err := c.PathThroughIsDependency(ctx, pkgVulnerable.Namespaces[0].Names[0].Versions[0].ID, idProduct, 10, edgesAllowed)
-				if err == nil {
-					path = append([]model.Node{vuln}, path...)
-					result = append(result, path)
-					productIDsCheckedVulnerable[idProduct] = true
+				if !slices.Contains(packagesAlreadyInvestigated, uint32(pkg)) {
+					products, err := c.bfsFromVulnerablePackage(uint32(pkg))
+					if err != nil {
+						return nil, err
+					}
+					for i := range products {
+						products[i] = append([]model.Node{vuln}, products[i]...)
+					}
+					result = append(result, products...)
 				}
 			}
 		}
@@ -137,6 +134,29 @@ func (c *demoClient) findRelatedProducts(ctx context.Context, pkgVulnerable *mod
 	}
 	return result, nil
 }
+
+//func (c *demoClient) findRelatedProducts(ctx context.Context, pkgVulnerable *model.Package, vuln model.Node, productIDsCheckedVulnerable map[string]bool) ([][]model.Node, error) {
+//	result := [][]model.Node{}
+//	// if the package affected from the vulnerability is a product ID
+//	// then we found a path from vulnerability to the package representing the product
+//	if alreadyFoundVulnerable, ok := productIDsCheckedVulnerable[pkgVulnerable.Namespaces[0].Names[0].Versions[0].ID]; ok && !alreadyFoundVulnerable {
+//		result = append(result, []model.Node{vuln, pkgVulnerable})
+//		productIDsCheckedVulnerable[pkgVulnerable.Namespaces[0].Names[0].Versions[0].ID] = true
+//	} else {
+//		for idProduct, checkedVulnerable := range productIDsCheckedVulnerable {
+//			if !checkedVulnerable {
+//				path, err := c.PathThroughIsDependency(ctx, pkgVulnerable.Namespaces[0].Names[0].Versions[0].ID, idProduct, 10, edgesAllowed)
+//				if err == nil {
+//					path = append([]model.Node{vuln}, path...)
+//					result = append(result, path)
+//					productIDsCheckedVulnerable[idProduct] = true
+//				}
+//			}
+//		}
+//
+//	}
+//	return result, nil
+//}
 
 // FindVulnerability returns all vulnerabilities related to a package
 func (c *demoClient) FindVulnerability(ctx context.Context, purl string) ([]model.CertifyVulnOrCertifyVEXStatement, error) {
