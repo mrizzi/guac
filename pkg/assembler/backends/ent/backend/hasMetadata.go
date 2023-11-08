@@ -82,7 +82,7 @@ func (b *EntBackend) IngestBulkHasMetadata(ctx context.Context, subjects model.P
 				return err
 			} else {
 				fmt.Printf("error is %s\n", err)
-				return gqlerror.Errorf("IngestBulkHasMetadata failed with element #%v %+v with err: %v", index, *subject.Package, err)
+				return gqlerror.Errorf("IngestBulkHasMetadata failed with element #%v %+v with err: %v", index, subject, err)
 			}
 		})
 	}
