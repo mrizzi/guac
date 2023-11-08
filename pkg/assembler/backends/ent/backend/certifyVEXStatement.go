@@ -141,7 +141,7 @@ func (b *EntBackend) IngestVEXStatement(ctx context.Context, subject model.Packa
 
 func (b *EntBackend) IngestVEXStatements(ctx context.Context, subjects model.PackageOrArtifactInputs, vulnerabilities []*model.VulnerabilityInputSpec, vexStatements []*model.VexStatementInputSpec) ([]string, error) {
 	var ids = make([]string, len(vexStatements))
-	eg, ctx := errgroup.WithContext(ctx)
+	eg, egCtx := errgroup.WithContext(ctx)
 	for i := range vexStatements {
 		index := i
 		var subject model.PackageOrArtifactInput
@@ -153,7 +153,7 @@ func (b *EntBackend) IngestVEXStatements(ctx context.Context, subjects model.Pac
 		vuln := *vulnerabilities[index]
 		vexStatement := *vexStatements[index]
 		concurrently(eg, func() error {
-			statement, err := b.IngestVEXStatement(ctx, subject, vuln, vexStatement)
+			statement, err := b.IngestVEXStatement(egCtx, subject, vuln, vexStatement)
 			if err == nil {
 				ids[index] = statement.ID
 				return err
