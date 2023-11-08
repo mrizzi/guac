@@ -18,6 +18,7 @@
 package backend
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -977,13 +978,14 @@ func (s *Suite) TestIngestBulkHasMetadata() {
 				}
 			}
 			for _, o := range test.Calls {
-				_, err := b.IngestBulkHasMetadata(ctx, o.Sub, o.Match, o.HM)
+				bhm, err := b.IngestBulkHasMetadata(ctx, o.Sub, o.Match, o.HM)
 				if (err != nil) != test.ExpIngestErr {
 					t.Fatalf("did not get expected ingest error, want: %v, got: %v", test.ExpIngestErr, err)
 				}
 				if err != nil {
 					return
 				}
+				fmt.Println("bhm", bhm)
 			}
 			got, err := b.HasMetadata(ctx, test.Query)
 			if (err != nil) != test.ExpQueryErr {

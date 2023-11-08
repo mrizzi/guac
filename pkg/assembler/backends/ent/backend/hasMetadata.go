@@ -32,6 +32,7 @@ import (
 )
 
 func (b *EntBackend) HasMetadata(ctx context.Context, filter *model.HasMetadataSpec) ([]*model.HasMetadata, error) {
+	fmt.Printf("HasMetadata ctx %v %+v\n", &ctx, ctx)
 	records, err := b.client.HasMetadata.Query().
 		Where(hasMetadataPredicate(filter)).
 		Limit(MaxPageSize).
@@ -60,8 +61,9 @@ func (b *EntBackend) IngestHasMetadata(ctx context.Context, subject model.Packag
 }
 
 func (b *EntBackend) IngestBulkHasMetadata(ctx context.Context, subjects model.PackageSourceOrArtifactInputs, pkgMatchType *model.MatchFlags, hasMetadataList []*model.HasMetadataInputSpec) ([]string, error) {
+	fmt.Printf("IngestBulkHasMetadata ctx %v %+v\n", &ctx, ctx)
 	var results = make([]string, len(hasMetadataList))
-	eg, ctx := errgroup.WithContext(ctx)
+	eg, egCtx := errgroup.WithContext(ctx)
 	for i := range hasMetadataList {
 		index := i
 		hmSpec := *hasMetadataList[index]
@@ -74,11 +76,12 @@ func (b *EntBackend) IngestBulkHasMetadata(ctx context.Context, subjects model.P
 			subject = model.PackageSourceOrArtifactInput{Source: subjects.Sources[index]}
 		}
 		concurrently(eg, func() error {
-			hm, err := b.IngestHasMetadata(ctx, subject, pkgMatchType, hmSpec)
+			hm, err := b.IngestHasMetadata(egCtx, subject, pkgMatchType, hmSpec)
 			if err == nil {
 				results[index] = hm.ID
 				return err
 			} else {
+				fmt.Printf("error is %s\n", err)
 				return gqlerror.Errorf("IngestBulkHasMetadata failed with element #%v %+v with err: %v", index, *subject.Package, err)
 			}
 		})
