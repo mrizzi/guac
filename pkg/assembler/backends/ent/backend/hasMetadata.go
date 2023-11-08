@@ -64,14 +64,14 @@ func (b *EntBackend) IngestBulkHasMetadata(ctx context.Context, subjects model.P
 	eg, ctx := errgroup.WithContext(ctx)
 	for i := range hasMetadataList {
 		index := i
-		hmSpec := *hasMetadataList[i]
+		hmSpec := *hasMetadataList[index]
 		var subject model.PackageSourceOrArtifactInput
 		if len(subjects.Packages) > 0 {
-			subject = model.PackageSourceOrArtifactInput{Package: subjects.Packages[i]}
+			subject = model.PackageSourceOrArtifactInput{Package: subjects.Packages[index]}
 		} else if len(subjects.Artifacts) > 0 {
-			subject = model.PackageSourceOrArtifactInput{Artifact: subjects.Artifacts[i]}
+			subject = model.PackageSourceOrArtifactInput{Artifact: subjects.Artifacts[index]}
 		} else {
-			subject = model.PackageSourceOrArtifactInput{Source: subjects.Sources[i]}
+			subject = model.PackageSourceOrArtifactInput{Source: subjects.Sources[index]}
 		}
 		concurrently(eg, func() error {
 			hm, err := b.IngestHasMetadata(ctx, subject, pkgMatchType, hmSpec)
@@ -79,7 +79,7 @@ func (b *EntBackend) IngestBulkHasMetadata(ctx context.Context, subjects model.P
 				results[index] = hm.ID
 				return err
 			} else {
-				return gqlerror.Errorf("IngestBulkHasMetadata failed with element #%v %+v with err: %v", i, *subject.Package, err)
+				return gqlerror.Errorf("IngestBulkHasMetadata failed with element #%v %+v with err: %v", index, *subject.Package, err)
 			}
 		})
 	}
