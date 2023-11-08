@@ -23,7 +23,7 @@ test: generate
 # To run it locally you can run the following command: make start-integration-service
 .PHONY: integration-test
 integration-test: generate check-env
-	go test -tags=integration ./...
+	go test -v -tags=integration ./...
 
 # Runs the integration tests locally using docker-compose to start the dependencies and cleans up after itself.
 .PHONY: integration-test-local
