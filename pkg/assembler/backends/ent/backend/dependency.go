@@ -76,7 +76,7 @@ func (b *EntBackend) IngestDependencies(ctx context.Context, pkgs []*model.PkgIn
 	// TODO: This looks like a good candidate for using BulkCreate()
 
 	var modelIsDependencies = make([]*model.IsDependency, len(dependencies))
-	eg, ctx := errgroup.WithContext(ctx)
+	eg, egCtx := errgroup.WithContext(ctx)
 	for i := range dependencies {
 		index := i
 		pkg := *pkgs[index]
@@ -84,7 +84,7 @@ func (b *EntBackend) IngestDependencies(ctx context.Context, pkgs []*model.PkgIn
 		dpmt := depPkgMatchType
 		dep := *dependencies[index]
 		concurrently(eg, func() error {
-			p, err := b.IngestDependency(ctx, pkg, depPkg, dpmt, dep)
+			p, err := b.IngestDependency(egCtx, pkg, depPkg, dpmt, dep)
 			if err == nil {
 				modelIsDependencies[index] = &model.IsDependency{ID: p.ID}
 			}
