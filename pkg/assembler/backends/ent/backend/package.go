@@ -104,12 +104,12 @@ func (b *EntBackend) Packages(ctx context.Context, pkgSpec *model.PkgSpec) ([]*m
 func (b *EntBackend) IngestPackages(ctx context.Context, pkgs []*model.PkgInputSpec) ([]*model.Package, error) {
 	// FIXME: (ivanvanderbyl) This will be suboptimal because we can't batch insert relations with upserts. See Readme.
 	models := make([]*model.Package, len(pkgs))
-	eg, ctx := errgroup.WithContext(ctx)
+	eg, egCtx := errgroup.WithContext(ctx)
 	for i := range pkgs {
 		index := i
 		pkg := pkgs[index]
 		concurrently(eg, func() error {
-			p, err := b.IngestPackage(ctx, *pkg)
+			p, err := b.IngestPackage(egCtx, *pkg)
 			if err == nil {
 				models[index] = p
 			}
