@@ -92,14 +92,14 @@ func (b *EntBackend) IngestCertifyVuln(ctx context.Context, pkg model.PkgInputSp
 
 func (b *EntBackend) IngestCertifyVulns(ctx context.Context, pkgs []*model.PkgInputSpec, vulnerabilities []*model.VulnerabilityInputSpec, certifyVulns []*model.ScanMetadataInput) ([]*model.CertifyVuln, error) {
 	var modelCertifyVulns = make([]*model.CertifyVuln, len(vulnerabilities))
-	eg, ctx := errgroup.WithContext(ctx)
+	eg, egCtx := errgroup.WithContext(ctx)
 	for i := range certifyVulns {
 		index := i
 		pkg := *pkgs[index]
 		vuln := *vulnerabilities[index]
 		certifyVuln := *certifyVulns[index]
 		concurrently(eg, func() error {
-			modelCertifyVuln, err := b.IngestCertifyVuln(ctx, pkg, vuln, certifyVuln)
+			modelCertifyVuln, err := b.IngestCertifyVuln(egCtx, pkg, vuln, certifyVuln)
 			if err == nil {
 				modelCertifyVulns[index] = modelCertifyVuln
 				return err
