@@ -18,7 +18,6 @@
 package backend
 
 import (
-	"context"
 	"strconv"
 	"strings"
 	"time"
@@ -1023,7 +1022,7 @@ func (s *Suite) TestIngestCertifyVulns() {
 			},
 		},
 	}
-	ctx := context.Background()
+	ctx := s.Ctx
 	for _, test := range tests {
 		s.Run(test.Name, func() {
 			t := s.T()
