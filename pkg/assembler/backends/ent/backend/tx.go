@@ -32,6 +32,7 @@ func WithinTX[T any](ctx context.Context, entClient *ent.Client, exec func(ctx c
 		Isolation: sql.LevelDefault,
 	})
 	if err != nil {
+		fmt.Printf("BeginTx err %s for tx %v\n", err, &tx)
 		return nil, err
 	}
 
