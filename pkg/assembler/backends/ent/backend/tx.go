@@ -35,6 +35,7 @@ func WithinTX[T any](ctx context.Context, entClient *ent.Client, exec func(ctx c
 		fmt.Printf("BeginTx err %s for tx %v\n", err, &tx)
 		return nil, err
 	}
+	fmt.Printf("BeginTx tx %v\n", &tx)
 
 	ctx = ent.NewTxContext(ctx, tx)
 
