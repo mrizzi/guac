@@ -124,7 +124,8 @@ func (b *EntBackend) IngestPackages(ctx context.Context, pkgs []*model.PkgInputS
 
 func (b *EntBackend) IngestPackage(ctx context.Context, pkg model.PkgInputSpec) (*model.Package, error) {
 	pkgVersion, err := WithinTX(ctx, b.client, func(ctx context.Context) (*ent.PackageVersion, error) {
-		p, err := upsertPackage(ctx, ent.TxFromContext(ctx), pkg)
+		tx := ent.TxFromContext(ctx)
+		p, err := upsertPackage(ctx, tx, pkg)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to upsert package")
 		}

@@ -51,7 +51,8 @@ func (b *EntBackend) HasMetadata(ctx context.Context, filter *model.HasMetadataS
 
 func (b *EntBackend) IngestHasMetadata(ctx context.Context, subject model.PackageSourceOrArtifactInput, pkgMatchType *model.MatchFlags, hasMetadata model.HasMetadataInputSpec) (*model.HasMetadata, error) {
 	recordID, err := WithinTX(ctx, b.client, func(ctx context.Context) (*int, error) {
-		return upsertHasMetadata(ctx, ent.TxFromContext(ctx), subject, pkgMatchType, hasMetadata)
+		tx := ent.TxFromContext(ctx)
+		return upsertHasMetadata(ctx, tx, subject, pkgMatchType, hasMetadata)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute IngestHasMetadata :: %s", err)
