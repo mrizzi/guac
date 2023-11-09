@@ -18,6 +18,7 @@ package backend
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/guacsec/guac/pkg/assembler/backends/ent"
 )
@@ -45,13 +46,17 @@ func WithinTX[T any](ctx context.Context, entClient *ent.Client, exec func(ctx c
 
 	result, err := exec(ctx)
 	if err != nil {
-		_ = tx.Rollback()
+		fmt.Printf("exec err %s\n", err)
+		errRollback := tx.Rollback()
+		fmt.Printf("exec errRollback %s\n", errRollback)
 		return nil, err
 	}
 
 	if err := tx.Commit(); err != nil {
+		fmt.Printf("Commit err %s\n", err)
 		return nil, err
 	}
 
+	fmt.Printf("tx commit %v %+v\n", &tx, tx)
 	return result, nil
 }
