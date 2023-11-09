@@ -46,9 +46,9 @@ func WithinTX[T any](ctx context.Context, entClient *ent.Client, exec func(ctx c
 
 	result, err := exec(ctx)
 	if err != nil {
-		fmt.Printf("exec err %s\n", err)
+		fmt.Printf("exec err %s for tx %v\n", err, &tx)
 		errRollback := tx.Rollback()
-		fmt.Printf("exec errRollback %s\n", errRollback)
+		fmt.Printf("exec errRollback %s for tx %v\n", errRollback, &tx)
 		return nil, err
 	}
 
