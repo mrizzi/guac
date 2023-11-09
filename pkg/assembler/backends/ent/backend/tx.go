@@ -32,10 +32,10 @@ func WithinTX[T any](ctx context.Context, entClient *ent.Client, exec func(ctx c
 		Isolation: sql.LevelDefault,
 	})
 	if err != nil {
-		fmt.Printf("BeginTx err %s for tx %v\n", err, &tx)
+		fmt.Printf("BeginTx err %s for tx %v ctx %v\n", err, &tx, &ctx)
 		return nil, err
 	}
-	fmt.Printf("BeginTx tx %v\n", &tx)
+	fmt.Printf("BeginTx tx %v %v\n", &tx, &ctx)
 
 	ctx = ent.NewTxContext(ctx, tx)
 
@@ -48,17 +48,17 @@ func WithinTX[T any](ctx context.Context, entClient *ent.Client, exec func(ctx c
 
 	result, err := exec(ctx)
 	if err != nil {
-		fmt.Printf("exec err %s for tx %v\n", err, &tx)
+		fmt.Printf("exec err %s for tx %v ctx %v\n", err, &tx, &ctx)
 		errRollback := tx.Rollback()
-		fmt.Printf("exec errRollback %s for tx %v\n", errRollback, &tx)
+		fmt.Printf("exec errRollback %s for tx %v ctx %v\n", errRollback, &tx, &ctx)
 		return nil, err
 	}
 
 	if err := tx.Commit(); err != nil {
-		fmt.Printf("Commit err %s\n", err)
+		fmt.Printf("Commit err %s %v ctx %v\n", err, &tx, &ctx)
 		return nil, err
 	}
 
-	fmt.Printf("tx commit %v %+v\n", &tx, tx)
+	fmt.Printf("tx commit %v ctx %v\n", &tx, &ctx)
 	return result, nil
 }

@@ -17,6 +17,7 @@ package backend
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 
@@ -47,6 +48,7 @@ func init() {
 
 func concurrently(eg *errgroup.Group, fn func() error) {
 	eg.Go(func() error {
+		fmt.Println("len(concurrent)", len(concurrent))
 		concurrent <- struct{}{}
 		err := fn()
 		<-concurrent
