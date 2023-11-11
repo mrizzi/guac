@@ -18,6 +18,7 @@ package backend
 import (
 	"context"
 	stdsql "database/sql"
+	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/guacsec/guac/pkg/assembler/backends/ent"
@@ -163,6 +164,7 @@ func (b *EntBackend) IngestVEXStatements(ctx context.Context, subjects model.Pac
 		})
 	}
 	if err := eg.Wait(); err != nil {
+		fmt.Println("IngestVEXStatements err", err)
 		return nil, err
 	}
 	return ids, nil

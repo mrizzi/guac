@@ -17,6 +17,7 @@ package backend
 
 import (
 	"context"
+	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/guacsec/guac/pkg/assembler/backends/ent"
@@ -92,6 +93,7 @@ func (b *EntBackend) IngestDependencies(ctx context.Context, pkgs []*model.PkgIn
 		})
 	}
 	if err := eg.Wait(); err != nil {
+		fmt.Println("IngestDependencies err", err)
 		return nil, err
 	}
 	return modelIsDependencies, nil

@@ -117,6 +117,7 @@ func (b *EntBackend) IngestPackages(ctx context.Context, pkgs []*model.PkgInputS
 		})
 	}
 	if err := eg.Wait(); err != nil {
+		fmt.Println("IngestPackages err", err)
 		return nil, err
 	}
 	return models, nil

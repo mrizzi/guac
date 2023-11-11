@@ -88,6 +88,7 @@ func (b *EntBackend) IngestBulkHasMetadata(ctx context.Context, subjects model.P
 		})
 	}
 	if err := eg.Wait(); err != nil {
+		fmt.Println("IngestBulkHasMetadata err", err)
 		return nil, err
 	}
 	return results, nil
