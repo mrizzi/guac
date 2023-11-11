@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/DATA-DOG/go-txdb"
 	"github.com/guacsec/guac/pkg/assembler/backends/ent"
@@ -90,6 +91,7 @@ func (s *Suite) BeforeTest(suiteName, testName string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	time.Sleep(100 * time.Millisecond)
 	s.db = db
 	entSqlDriver := dsql.OpenDB("postgres", db)
 	// enttest automatically runs migrations to create the schema in the test database.
