@@ -20,10 +20,9 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
-	"time"
 
-	"github.com/DATA-DOG/go-txdb"
 	"github.com/guacsec/guac/pkg/assembler/backends/ent"
 	"github.com/guacsec/guac/pkg/assembler/backends/ent/enttest"
 	"github.com/segmentio/ksuid"
@@ -36,17 +35,24 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func init() {
-	db := os.Getenv("ENT_TEST_DATABASE_URL")
-	if db == "" {
-		db = "postgresql://localhost/guac_test?sslmode=disable"
-	}
+var psqlDb *sql.DB
+var dbUrl *url.URL
 
-	txdb.Register("txdb", "postgres", db)
-	err := os.Setenv("MAX_CONCURRENT_BULK_INGESTION", "1")
+func init() {
+	dbUrlString := os.Getenv("ENT_TEST_DATABASE_URL")
+	if dbUrlString == "" {
+		dbUrlString = "postgresql://localhost/guac_test?sslmode=disable"
+	}
+	db, err := sql.Open("postgres", dbUrlString)
 	if err != nil {
 		log.Fatal(err)
 	}
+	psqlDb = db
+	u, err := url.Parse(dbUrlString)
+	if err != nil {
+		log.Fatal(err)
+	}
+	dbUrl = u
 }
 
 type Suite struct {
@@ -63,16 +69,6 @@ func TestSuite() *Suite {
 }
 
 func (s *Suite) Run(testName string, tf func()) {
-	_, err := s.db.Exec("SAVEPOINT savepoint1")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer func(db *sql.DB, query string, args ...any) {
-		_, err := db.Exec(query, args...)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}(s.db, "ROLLBACK TO SAVEPOINT savepoint1")
 	s.Suite.Run(testName, tf)
 }
 
@@ -85,13 +81,21 @@ func (s *Suite) AfterEach(fn func()) {
 }
 
 func (s *Suite) BeforeTest(suiteName, testName string) {
-	ctx := context.Background()
+	s.Ctx = context.Background()
+}
+func (s *Suite) SetupSubTest() {
+	ctx := s.Ctx
 	ident := ksuid.New().String()
-	db, err := sql.Open("txdb", ident)
+	_, err := psqlDb.ExecContext(s.Ctx, fmt.Sprintf("CREATE DATABASE \"%v\"", ident))
 	if err != nil {
 		log.Fatal(err)
 	}
-	time.Sleep(100 * time.Millisecond)
+	u := *dbUrl
+	u.Path = ident
+	db, err := sql.Open("postgres", u.String())
+	if err != nil {
+		log.Fatal(err)
+	}
 	s.db = db
 	entSqlDriver := dsql.OpenDB("postgres", db)
 	// enttest automatically runs migrations to create the schema in the test database.
@@ -106,19 +110,16 @@ func (s *Suite) BeforeTest(suiteName, testName string) {
 	// Populate context with ent client so that transactions work
 	ctx = ent.NewContext(ctx, s.Client)
 	s.Ctx = ctx
-
-	for _, fn := range s.beforeHooks {
-		fn(suiteName, testName)
-	}
 }
 
-func (s *Suite) AfterTest(suiteName, testName string) {
+func (s *Suite) TearDownSubTest() {
 	err := s.Client.Close()
 	if err != nil {
-		fmt.Printf("WARN: %v/%v error while closing the Ent client :: %s", suiteName, testName, err)
+		fmt.Printf("WARN: error while closing the Ent client :: %s", err)
 		return
 	}
 }
 
 var _ suite.BeforeTest = (*Suite)(nil)
-var _ suite.AfterTest = (*Suite)(nil)
+var _ suite.SetupSubTest = (*Suite)(nil)
+var _ suite.TearDownSubTest = (*Suite)(nil)
