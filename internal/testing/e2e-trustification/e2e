@@ -53,11 +53,11 @@ echo
 curl -s http://localhost:8080/query >/dev/null 2>&1 || (echo "Guac server not running in time" && exit 1)
 echo "Guac server started"
 
-echo @@@@ Ingesting trustification-data SBOM into server
-time find "${GUAC_DIR}/trustification/data/ds1/sbom/" -name *.bz2 -exec go run ./cmd/guacone collect files {} \;
-
 echo @@@@ Ingesting trustification-data VEX into server
 time find "${GUAC_DIR}/trustification/data/ds1/csaf/" -name cve*.json -exec go run ./cmd/guacone collect files {} \;
+
+echo @@@@ Ingesting trustification-data SBOM into server
+time find "${GUAC_DIR}/trustification/data/ds1/sbom/" -name *.bz2 -exec go run ./cmd/guacone collect files {} \;
 
 queries="${GUAC_DIR}/demo/graphql/queries-trustification.gql"
 
